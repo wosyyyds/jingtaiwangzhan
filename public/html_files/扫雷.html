@@ -101,8 +101,7 @@
         
         .cell {
             width: 30px;
- 
-           height: 30px;
+            height: 30px;
             border: 1px solid #636e72;
             background: #ddd;
             display: inline-block;
@@ -112,6 +111,8 @@
             font-size: 18px;
             cursor: pointer;
             user-select: none;
+            box-sizing: border-box;
+            position: relative;
         }
         
         .cell:hover {
@@ -129,6 +130,38 @@
         
         .cell.flagged::after {
             content: "🚩";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .cell.revealed.mine::before {
+            content: "💣";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .cell.revealed:not(.mine)::before {
+            content: attr(data-number);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         
         .instructions {
@@ -390,11 +423,11 @@
                 if (value === -1) {
                     // 踩到地雷
                     cell.classList.add('mine');
-                    cell.textContent = '💣';
+                    // 不再直接设置textContent，而是使用CSS伪元素
                     this.endGame(false);
                 } else if (value > 0) {
                     // 显示数字
-                    cell.textContent = value;
+                    cell.setAttribute('data-number', value);
                     cell.classList.add(`number-${value}`);
                 } else {
                     // 空方块，递归揭开周围的方块
@@ -419,7 +452,7 @@
                         cell.classList.add('revealed');
                         
                         if (value > 0) {
-                            cell.textContent = value;
+                            cell.setAttribute('data-number', value);
                             cell.classList.add(`number-${value}`);
                         } else if (value === 0) {
                             // 递归揭开周围的空方块
@@ -515,7 +548,7 @@
                         const cell = document.querySelector(`.cell[data-row="${mine.row}"][data-col="${mine.col}"]`);
                         if (!cell.classList.contains('flagged') && !cell.classList.contains('revealed')) {
                             cell.classList.add('revealed', 'mine');
-                            cell.textContent = '💣';
+                            // 不再直接设置textContent，而是使用CSS伪元素
                         }
                     }
                 }

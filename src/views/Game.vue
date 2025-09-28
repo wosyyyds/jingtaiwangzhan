@@ -127,13 +127,22 @@ const games = ref([
     path: '/html_files/推箱子.html'
   },
   {
-    id: 'push-the-box1',
+    id: 'huarongdao',
     name: '华容道',
-    icon: '📦',
-    description: '将所有箱子推到目标位置',
-    category: '休闲',
-    difficulty: '中等',
+    icon: '🎯',
+    description: '滑动方块帮助曹操逃脱',
+    category: '益智',
+    difficulty: '困难',
     path: '/html_files/华容道.html'
+  },
+  {
+    id: 'puzzle',
+    name: '拼图',
+    icon: '🧩',
+    description: '完成图片拼图挑战',
+    category: '益智',
+    difficulty: '简单',
+    path: '/html_files/拼图.html'
   }
 ])
 

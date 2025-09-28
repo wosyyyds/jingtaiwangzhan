@@ -142,45 +142,6 @@
             margin-bottom: 20px;
         }
         
-        /* 移动端控制按钮样式 */
-        .mobile-controls {
-            display: none;
-            margin-top: 20px;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .mobile-controls-row {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .mobile-control-btn {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 24px;
-            color: white;
-            cursor: pointer;
-            user-select: none;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        }
-        
-        .mobile-control-btn:active {
-            background: rgba(255, 255, 255, 0.3);
-            transform: scale(0.95);
-        }
-        
-        /* 添加默认隐藏，移动端才显示 */
-        .mobile-controls {
-            display: none;
-        }
-        
         @media (max-width: 768px) {
             .game-container {
                 flex-direction: column;
@@ -191,18 +152,6 @@
                 width: 100%;
                 max-width: 300px;
             }
-            
-            .mobile-controls {
-                display: flex;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .mobile-control-btn {
-                width: 50px;
-                height: 50px;
-                font-size: 20px;
-            }
         }
     </style>
 </head>
@@ -210,32 +159,15 @@
     <div class="game-title">俄罗斯方块</div>
     
     <div class="game-container">
-
-        <div class="info-panel">
-                <h2>下一个方块</h2>
-                <canvas id="next-piece" class="next-piece" width="120" height="120"></canvas>
-            </div>
-
-
         <div class="game-area">
             <canvas id="game-board" class="game-board" width="300" height="600"></canvas>
         </div>
         
-            <!-- 移动端控制按钮 -->
-            <div class="mobile-controls">
-                <div class="mobile-controls-row">
-                    <div class="mobile-control-btn" id="up-btn">↑</div>
-                </div>
-                <div class="mobile-controls-row">
-                    <div class="mobile-control-btn" id="left-btn">←</div>
-                    <div class="mobile-control-btn" id="down-btn">↓</div>
-                    <div class="mobile-control-btn" id="right-btn">→</div>
-                </div>
-            </div>
-
-
         <div class="side-panel">
-            
+            <div class="info-panel">
+                <h2>下一个方块</h2>
+                <canvas id="next-piece" class="next-piece" width="120" height="120"></canvas>
+            </div>
             
             <div class="info-panel">
                 <h2>游戏信息</h2>
@@ -249,7 +181,6 @@
                 <button id="pause-btn">暂停游戏</button>
                 <button id="restart-btn">重新开始</button>
             </div>
-            
             
             <div class="instructions">
                 <h3>操作说明</h3>
@@ -693,35 +624,9 @@
         document.getElementById('restart-btn').addEventListener('click', init);
 
         document.getElementById('play-again').addEventListener('click', init);
-        
-        // 移动端控制按钮事件
-        document.getElementById('up-btn').addEventListener('click', () => {
-            if (!gameOver && !paused) {
-                playerRotate(1);
-            }
-        });
-        
-        document.getElementById('down-btn').addEventListener('click', () => {
-            if (!gameOver && !paused) {
-                playerDrop();
-            }
-        });
-        
-        document.getElementById('left-btn').addEventListener('click', () => {
-            if (!gameOver && !paused) {
-                playerMove(-1);
-            }
-        });
-        
-        document.getElementById('right-btn').addEventListener('click', () => {
-            if (!gameOver && !paused) {
-                playerMove(1);
-            }
-        });
 
         // 初始化游戏
         init();
     </script>
 </body>
 </html>
-

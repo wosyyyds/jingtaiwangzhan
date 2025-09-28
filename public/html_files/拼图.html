@@ -116,23 +116,39 @@
             border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            background-color: #f0f0f0;
         }
         
         .puzzle-piece {
             position: absolute;
-            cursor: pointer;
+            cursor: grab;
             transition: all 0.3s ease;
             border: 1px solid rgba(255, 255, 255, 0.5);
+            user-select: none;
+            touch-action: none;
         }
         
-        .puzzle-piece:hover {
-            transform: scale(1.02);
-            z-index: 10;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        .puzzle-piece:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+            z-index: 100;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .puzzle-piece.dragging {
+            opacity: 0.8;
+            z-index: 100;
         }
         
         .empty-piece {
             background-color: #f0f0f0;
+            visibility: visible;
+            border: 2px dashed #ccc;
+            cursor: default;
+        }
+        
+        .empty-piece:hover {
+            background-color: #e8e8e8;
         }
         
         .completed-message {
@@ -179,6 +195,7 @@
             box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
         }
         
+        /* 移动端适配 */
         @media (max-width: 768px) {
             .puzzle-container {
                 width: 300px;
@@ -193,6 +210,15 @@
                 flex-direction: column;
                 align-items: center;
             }
+            
+            .game-info {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            
+            .info-value {
+                font-size: 1.2rem;
+            }
         }
         
         @media (max-width: 480px) {
@@ -205,6 +231,39 @@
                 flex-direction: column;
                 gap: 10px;
             }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .info-value {
+                font-size: 1.3rem;
+            }
+            
+            .controls {
+                gap: 10px;
+            }
+            
+            button, select {
+                padding: 8px 15px;
+                font-size: 0.9rem;
+            }
+        }
+        
+        /* 超小屏幕适配 */
+        @media (max-width: 320px) {
+            .puzzle-container {
+                width: 200px;
+                height: 200px;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .info-value {
+                font-size: 1.1rem;
+            }
         }
     </style>
 </head>
@@ -212,7 +271,7 @@
     <div class="container">
         <header>
             <h1>拼图游戏</h1>
-            <p>拖动拼图块完成图片拼图</p>
+            <p>拖动拼图块到空白位置完成拼图</p>
         </header>
         
         <div class="game-info">
@@ -268,6 +327,10 @@
         let pieces = [];
         let emptyIndex;
         let imageUrl = 'https://picsum.photos/400'; // 默认图片
+        let isDragging = false;
+        let dragPiece = null;
+        let dragStartX, dragStartY;
+        let dragStartLeft, dragStartTop;
         
         // DOM元素
         const puzzleContainer = document.getElementById('puzzleContainer');
@@ -320,11 +383,13 @@
             
             pieces = [];
             
+            // 创建所有拼图块（包括一个空白块）
             for (let i = 0; i < difficulty * difficulty; i++) {
                 const piece = document.createElement('div');
                 piece.className = 'puzzle-piece';
                 piece.style.width = `${pieceSize}px`;
                 piece.style.height = `${pieceSize}px`;
+                piece.dataset.index = i;
                 
                 if (i === difficulty * difficulty - 1) {
                     // 最后一块是空的
@@ -343,8 +408,8 @@
                     piece.style.left = `${col * pieceSize}px`;
                     piece.style.top = `${row * pieceSize}px`;
                     
-                    // 添加点击事件
-                    piece.addEventListener('click', () => movePiece(i));
+                    // 添加拖动事件
+                    addDragEvents(piece);
                 }
                 
                 puzzleContainer.appendChild(piece);
@@ -352,14 +417,168 @@
             }
         }
         
+        // 添加拖动事件
+        function addDragEvents(piece) {
+            piece.addEventListener('mousedown', startDrag);
+            piece.addEventListener('touchstart', startDrag, { passive: false });
+            
+            // 为移动端添加额外的事件监听
+            piece.addEventListener('touchmove', drag, { passive: false });
+            piece.addEventListener('touchend', endDrag);
+        }
+        
+        // 开始拖动
+        function startDrag(e) {
+            if (!gameStarted) return;
+            
+            e.preventDefault();
+            isDragging = true;
+            dragPiece = this;
+            
+            // 记录初始位置
+            dragStartLeft = parseInt(this.style.left);
+            dragStartTop = parseInt(this.style.top);
+            
+            // 记录鼠标/触摸起始位置
+            if (e.type === 'mousedown') {
+                dragStartX = e.clientX;
+                dragStartY = e.clientY;
+                document.addEventListener('mousemove', drag);
+                document.addEventListener('mouseup', endDrag);
+            } else if (e.type === 'touchstart') {
+                const touch = e.touches[0];
+                dragStartX = touch.clientX;
+                dragStartY = touch.clientY;
+            }
+            
+            this.classList.add('dragging');
+        }
+        
+        // 拖动中
+        function drag(e) {
+            if (!isDragging || !dragPiece) return;
+            
+            e.preventDefault();
+            
+            let clientX, clientY;
+            if (e.type === 'mousemove') {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            } else if (e.type === 'touchmove') {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            }
+            
+            // 计算移动距离
+            const deltaX = clientX - dragStartX;
+            const deltaY = clientY - dragStartY;
+            
+            // 更新位置
+            dragPiece.style.left = `${dragStartLeft + deltaX}px`;
+            dragPiece.style.top = `${dragStartTop + deltaY}px`;
+        }
+        
+        // 结束拖动
+        function endDrag(e) {
+            if (!isDragging || !dragPiece) return;
+            
+            e.preventDefault();
+            
+            // 移除事件监听器
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', endDrag);
+            
+            // 检查是否可以移动到空白位置
+            const pieceIndex = parseInt(dragPiece.dataset.index);
+            const containerSize = puzzleContainer.offsetWidth;
+            const pieceSize = containerSize / difficulty;
+            
+            // 获取当前拖动块的位置
+            const currentLeft = parseInt(dragPiece.style.left);
+            const currentTop = parseInt(dragPiece.style.top);
+            
+            // 获取空白块的位置
+            const emptyPiece = pieces[emptyIndex];
+            const emptyLeft = parseInt(emptyPiece.style.left);
+            const emptyTop = parseInt(emptyPiece.style.top);
+            
+            // 检查是否靠近空白位置（允许一定的误差范围）
+            const distance = Math.sqrt(
+                Math.pow(currentLeft - emptyLeft, 2) + 
+                Math.pow(currentTop - emptyTop, 2)
+            );
+            
+            // 如果距离很近，就交换位置
+            if (distance < pieceSize * 0.8) {
+                // 移动拼图块到空白位置
+                dragPiece.style.left = `${emptyLeft}px`;
+                dragPiece.style.top = `${emptyTop}px`;
+                
+                // 移动空白块到被拖动的位置
+                emptyPiece.style.left = `${dragStartLeft}px`;
+                emptyPiece.style.top = `${dragStartTop}px`;
+                
+                // 交换数组中的位置
+                pieces[emptyIndex] = dragPiece;
+                pieces[pieceIndex] = emptyPiece;
+                
+                // 更新空块位置
+                emptyIndex = pieceIndex;
+                
+                // 增加步数
+                moves++;
+                updateMoves();
+                
+                // 检查是否完成
+                checkCompletion();
+            } else {
+                // 回到原位置
+                dragPiece.style.left = `${dragStartLeft}px`;
+                dragPiece.style.top = `${dragStartTop}px`;
+            }
+            
+            // 重置拖动状态
+            dragPiece.classList.remove('dragging');
+            isDragging = false;
+            dragPiece = null;
+        }
+        
         // 打乱拼图
         function shufflePuzzle() {
             // 执行多次随机移动来打乱拼图
             for (let i = 0; i < difficulty * difficulty * 50; i++) {
                 const possibleMoves = getPossibleMoves();
-                const randomMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-                swapPieces(emptyIndex, randomMove);
-                emptyIndex = randomMove;
+                if (possibleMoves.length > 0) {
+                    const randomMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+                    
+                    // 移动拼图块到空白位置
+                    const piece = pieces[randomMove];
+                    if (piece) {
+                        const emptyRowPos = Math.floor(emptyIndex / difficulty);
+                        const emptyColPos = emptyIndex % difficulty;
+                        const containerSize = puzzleContainer.offsetWidth;
+                        const pieceSize = containerSize / difficulty;
+                        
+                        piece.style.left = `${emptyColPos * pieceSize}px`;
+                        piece.style.top = `${emptyRowPos * pieceSize}px`;
+                        
+                        // 同时将空白块移动到被点击的位置
+                        const clickedRowPos = Math.floor(randomMove / difficulty);
+                        const clickedColPos = randomMove % difficulty;
+                        const emptyPiece = pieces[emptyIndex];
+                        if (emptyPiece) {
+                            emptyPiece.style.left = `${clickedColPos * pieceSize}px`;
+                            emptyPiece.style.top = `${clickedRowPos * pieceSize}px`;
+                        }
+                        
+                        // 交换数组中的位置
+                        pieces[emptyIndex] = piece;
+                        pieces[randomMove] = emptyPiece;
+                        
+                        // 更新空块位置
+                        emptyIndex = randomMove;
+                    }
+                }
             }
             
             // 重置步数
@@ -367,7 +586,7 @@
             updateMoves();
         }
         
-        // 获取可以移动的拼图块索引
+        // 获取可以移动的拼图块索引（空白块附近的拼图块）
         function getPossibleMoves() {
             const moves = [];
             const emptyRow = Math.floor(emptyIndex / difficulty);
@@ -385,50 +604,16 @@
             return moves;
         }
         
-        // 移动拼图块
-        function movePiece(index) {
-            if (!gameStarted) return;
-            
-            const possibleMoves = getPossibleMoves();
-            if (possibleMoves.includes(index)) {
-                // 交换位置
-                swapPieces(emptyIndex, index);
-                
-                // 更新空块位置
-                emptyIndex = index;
-                
-                // 增加步数
-                moves++;
-                updateMoves();
-                
-                // 检查是否完成
-                checkCompletion();
-            }
-        }
-        
-        // 交换两个拼图块的位置
-        function swapPieces(index1, index2) {
-            const piece1 = pieces[index1];
-            const piece2 = pieces[index2];
-            
-            // 交换位置
-            const tempLeft = piece1.style.left;
-            const tempTop = piece1.style.top;
-            
-            piece1.style.left = piece2.style.left;
-            piece1.style.top = piece2.style.top;
-            
-            piece2.style.left = tempLeft;
-            piece2.style.top = tempTop;
-            
-            // 交换数组中的位置
-            pieces[index1] = piece2;
-            pieces[index2] = piece1;
-        }
-        
         // 检查拼图是否完成
         function checkCompletion() {
-            for (let i = 0; i < pieces.length; i++) {
+            // 检查空块是否在正确位置（右下角）
+            const expectedEmptyIndex = difficulty * difficulty - 1;
+            if (emptyIndex !== expectedEmptyIndex) {
+                return; // 空块不在正确位置
+            }
+            
+            // 检查其他拼图块是否在正确位置
+            for (let i = 0; i < pieces.length - 1; i++) {
                 const row = Math.floor(i / difficulty);
                 const col = i % difficulty;
                 
@@ -436,11 +621,13 @@
                 const expectedTop = row * (puzzleContainer.offsetWidth / difficulty);
                 
                 const piece = pieces[i];
-                const actualLeft = parseInt(piece.style.left);
-                const actualTop = parseInt(piece.style.top);
-                
-                if (actualLeft !== expectedLeft || actualTop !== expectedTop) {
-                    return; // 有一块位置不对，游戏未完成
+                if (piece) {
+                    const actualLeft = parseInt(piece.style.left);
+                    const actualTop = parseInt(piece.style.top);
+                    
+                    if (actualLeft !== expectedLeft || actualTop !== expectedTop) {
+                        return; // 有一块位置不对，游戏未完成
+                    }
                 }
             }
             
