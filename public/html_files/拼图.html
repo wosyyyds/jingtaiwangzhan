@@ -195,6 +195,11 @@
             box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
         }
         
+        .upload-label.loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        
         /* 移动端适配 */
         @media (max-width: 768px) {
             .puzzle-container {
@@ -345,6 +350,7 @@
         const finalMovesElement = document.getElementById('finalMoves');
         const playAgainBtn = document.getElementById('playAgainBtn');
         const imageUpload = document.getElementById('imageUpload');
+        const uploadLabel = document.querySelector('.upload-label');
         
         // 初始化游戏
         function initGame() {
@@ -698,14 +704,62 @@
         imageUpload.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
+                // 检查文件大小（限制为5MB）
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('图片文件过大，请选择小于5MB的图片');
+                    return;
+                }
+                
+                // 检查文件类型
+                if (!file.type.match('image.*')) {
+                    alert('请选择图片文件');
+                    return;
+                }
+                
+                // 显示加载提示
+                const originalText = uploadLabel.textContent;
+                uploadLabel.textContent = '图片加载中...';
+                uploadLabel.style.opacity = '0.7';
+                uploadLabel.style.pointerEvents = 'none';
+                
                 const reader = new FileReader();
                 reader.onload = function(event) {
-                    imageUrl = event.target.result;
-                    if (gameStarted) {
-                        initGame();
-                        startTimer();
-                    }
+                    // 创建图片对象来检查图片尺寸
+                    const img = new Image();
+                    img.onload = function() {
+                        // 恢复上传按钮状态
+                        uploadLabel.textContent = originalText;
+                        uploadLabel.style.opacity = '1';
+                        uploadLabel.style.pointerEvents = 'auto';
+                        
+                        imageUrl = event.target.result;
+                        if (gameStarted) {
+                            initGame();
+                            startTimer();
+                        }
+                    };
+                    
+                    img.onerror = function() {
+                        // 恢复上传按钮状态
+                        uploadLabel.textContent = originalText;
+                        uploadLabel.style.opacity = '1';
+                        uploadLabel.style.pointerEvents = 'auto';
+                        
+                        alert('图片加载失败，请选择其他图片');
+                    };
+                    
+                    img.src = event.target.result;
                 };
+                
+                reader.onerror = function() {
+                    // 恢复上传按钮状态
+                    uploadLabel.textContent = originalText;
+                    uploadLabel.style.opacity = '1';
+                    uploadLabel.style.pointerEvents = 'auto';
+                    
+                    alert('文件读取失败，请重试');
+                };
+                
                 reader.readAsDataURL(file);
             }
         });

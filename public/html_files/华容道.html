@@ -90,6 +90,7 @@
             transition: all 0.3s ease;
             user-select: none;
             box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.2);
+            z-index: 2; /* 确保滑块在出口标记之上 */
         }
         
         .piece.selected {
@@ -220,6 +221,42 @@
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
         
+        /* 移动端控制按钮样式 */
+        .mobile-controls {
+            display: none;
+            margin-top: 20px;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .mobile-controls-row {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .mobile-control-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: white;
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            border: none;
+            font-weight: bold;
+        }
+        
+        .mobile-control-btn:active {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(0.95);
+        }
+        
         @media (max-width: 600px) {
             h1 {
                 font-size: 2rem;
@@ -236,6 +273,11 @@
             
             .controls-info {
                 font-size: 0.8rem;
+            }
+            
+            /* 在移动端显示控制按钮 */
+            .mobile-controls {
+                display: flex;
             }
         }
     </style>
@@ -268,6 +310,22 @@
             <button id="hint">提示</button>
             <button id="selectCaoCao">选择曹操</button>
         </div>
+        
+        <!-- 移动端控制按钮 -->
+        <div class="mobile-controls">
+            <div class="mobile-controls-row">
+                <button class="mobile-control-btn" id="up-btn">↑</button>
+            </div>
+            <div class="mobile-controls-row">
+                <button class="mobile-control-btn" id="left-btn">←</button>
+                <button class="mobile-control-btn" id="down-btn">↓</button>
+                <button class="mobile-control-btn" id="right-btn">→</button>
+            </div>
+            <div class="mobile-controls-row">
+                <button class="mobile-control-btn" id="prev-btn">上一个</button>
+                <button class="mobile-control-btn" id="next-btn">下一个</button>
+            </div>
+        </div>
     </div>
     
     <div class="victory-message" id="victoryMessage">
@@ -294,8 +352,8 @@
                     { id: 'huang-zhong', name: '黄忠', width: 1, height: 2, top: 2, left: 3, type: 'huang-zhong' },
                     { id: 'soldier1', name: '兵', width: 1, height: 1, top: 2, left: 1, type: 'soldier' },
                     { id: 'soldier2', name: '兵', width: 1, height: 1, top: 2, left: 2, type: 'soldier' },
-                    { id: 'soldier3', name: '兵', width: 1, height: 1, top: 3, left: 0, type: 'soldier' }, // 修改位置
-                    { id: 'soldier4', name: '兵', width: 1, height: 1, top: 3, left: 3, type: 'soldier' }  // 修改位置
+                    { id: 'soldier3', name: '兵', width: 1, height: 1, top: 4, left: 0, type: 'soldier' }, // 修改位置
+                    { id: 'soldier4', name: '兵', width: 1, height: 1, top: 4, left: 3, type: 'soldier' }  // 修改位置
                 ]
             };
             
@@ -314,6 +372,14 @@
             const selectCaoCaoBtn = document.getElementById('selectCaoCao');
             const victoryMessage = document.getElementById('victoryMessage');
             const playAgainBtn = document.getElementById('playAgain');
+            
+            // 移动端控制按钮
+            const upBtn = document.getElementById('up-btn');
+            const downBtn = document.getElementById('down-btn');
+            const leftBtn = document.getElementById('left-btn');
+            const rightBtn = document.getElementById('right-btn');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
             
             // 初始化游戏
             function initGame() {
@@ -339,20 +405,24 @@
             // 创建棋盘格子
             function createBoardGrid() {
                 boardGrid.innerHTML = '';
-                const totalCells = config.rows * config.cols;
                 
-                for (let i = 0; i < totalCells; i++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'cell';
-                    boardGrid.appendChild(cell);
+                // 创建网格单元格
+                for (let row = 0; row < config.rows; row++) {
+                    for (let col = 0; col < config.cols; col++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        boardGrid.appendChild(cell);
+                    }
                 }
                 
-                // 添加出口标记
+                // 添加出口标记（使用grid定位）
                 const exitCell = document.createElement('div');
-                exitCell.style.gridArea = '5 / 2 / 6 / 3';
+                exitCell.style.gridRow = '5';
+                exitCell.style.gridColumn = '2 / 4';
                 exitCell.style.background = 'rgba(255, 255, 0, 0.2)';
                 exitCell.style.border = '2px dashed rgba(255, 255, 0, 0.5)';
                 exitCell.style.borderRadius = '0 0 10px 10px';
+                exitCell.style.zIndex = '1';
                 boardGrid.appendChild(exitCell);
             }
             
@@ -424,6 +494,14 @@
                 gameState.pieces.forEach(piece => {
                     piece.addEventListener('click', () => selectPiece(piece));
                 });
+                
+                // 移动端控制按钮事件
+                if (upBtn) upBtn.addEventListener('click', () => moveSelectedPiece('up'));
+                if (downBtn) downBtn.addEventListener('click', () => moveSelectedPiece('down'));
+                if (leftBtn) leftBtn.addEventListener('click', () => moveSelectedPiece('left'));
+                if (rightBtn) rightBtn.addEventListener('click', () => moveSelectedPiece('right'));
+                if (prevBtn) prevBtn.addEventListener('click', selectPreviousPiece);
+                if (nextBtn) nextBtn.addEventListener('click', selectNextPiece);
             }
             
             // 处理键盘事件
@@ -595,12 +673,14 @@
                 
                 const caoCao = caoCaos[0];
                 const caoCaoTop = parseInt(caoCao.dataset.top);
+                const caoCaoHeight = parseInt(caoCao.dataset.height);
                 
-                // 如果曹操滑块的顶部位置等于棋盘行数减2（即到达底部）
-                if (caoCaoTop === config.rows - 2) {
+                // 如果曹操滑块的底部位置等于棋盘行数（即到达底部出口）
+                if (caoCaoTop + caoCaoHeight === config.rows) {
                     // 检查是否在中间列
                     const caoCaoLeft = parseInt(caoCao.dataset.left);
-                    if (caoCaoLeft === 1) {
+                    const caoCaoWidth = parseInt(caoCao.dataset.width);
+                    if (caoCaoLeft === 1 && caoCaoWidth === 2) {
                         showVictoryMessage();
                     }
                 }
