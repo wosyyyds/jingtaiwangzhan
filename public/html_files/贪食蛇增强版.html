@@ -55,6 +55,7 @@
             background: rgba(0, 0, 0, 0.3);
             display: block;
             margin: 0 auto;
+            max-width: 100%;
         }
         
         .controls {
@@ -178,6 +179,87 @@
         .shield {
             background-color: #69f0ae;
         }
+        
+        /* 移动端控制按钮 */
+        .mobile-controls {
+            display: none;
+            margin-top: 20px;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .mobile-controls-row {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .mobile-control-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: white;
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .mobile-control-btn:active {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(0.95);
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .game-container {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .stats-container {
+                flex-direction: column;
+                gap: 10px;
+                font-size: 1rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            button {
+                width: 100%;
+                max-width: 250px;
+            }
+            
+            .mobile-controls {
+                display: flex;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .instructions {
+                font-size: 0.9rem;
+            }
+            
+            .mobile-control-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -217,10 +299,23 @@
             <button id="reset-btn">重新开始</button>
         </div>
         
+        <!-- 移动端控制按钮 -->
+        <div class="mobile-controls">
+            <div class="mobile-controls-row">
+                <div class="mobile-control-btn" id="up-btn">↑</div>
+            </div>
+            <div class="mobile-controls-row">
+                <div class="mobile-control-btn" id="left-btn">←</div>
+                <div class="mobile-control-btn" id="down-btn">↓</div>
+                <div class="mobile-control-btn" id="right-btn">→</div>
+            </div>
+        </div>
+        
         <div class="instructions">
             <h2>游戏说明:</h2>
             <ul>
                 <li>使用键盘方向键或WASD控制蛇的移动</li>
+                <li>在手机上可以使用屏幕下方的方向按钮控制</li>
                 <li>吃到红色食物可以增加分数和蛇的长度</li>
                 <li>特殊食物效果：
                     <ul>
@@ -238,7 +333,7 @@
     </div>
 
     <script>
-        // 游戏变量
+        // 游戏变量 - 先声明所有变量
         const canvas = document.getElementById('game-board');
         const ctx = canvas.getContext('2d');
         const scoreElement = document.getElementById('score');
@@ -250,22 +345,54 @@
         const gameOverElement = document.getElementById('game-over');
         const difficultySelect = document.getElementById('difficulty');
         
-        const gridSize = 20;
-        const tileCount = canvas.width / gridSize;
+        // 移动端控制按钮
+        const upBtn = document.getElementById('up-btn');
+        const downBtn = document.getElementById('down-btn');
+        const leftBtn = document.getElementById('left-btn');
+        const rightBtn = document.getElementById('right-btn');
         
+        // 初始化游戏变量
+        let gridSize = 20;
+        let tileCount;
         let snake = [];
         let foods = [];
         let dx = 0;
         let dy = 0;
         let score = 0;
         let highScore = localStorage.getItem('snakeEnhancedHighScore') || 0;
-        let gameRunning = false;
+        let gameRunning = false;  // 现在在这里初始化
         let gamePaused = false;
         let gameInterval;
         let snakeLength = 3;
-        let speed = 150; // 默认速度
+        let speed = 150;
         let doublePoints = false;
         let shield = false;
+        
+        // 根据屏幕大小调整画布尺寸
+        function resizeCanvas() {
+            const maxWidth = Math.min(500, window.innerWidth - 60);
+            const maxHeight = Math.min(500, window.innerHeight * 0.5);
+            const size = Math.min(maxWidth, maxHeight);
+            
+            canvas.width = size;
+            canvas.height = size;
+            
+            // 重新计算网格大小
+            gridSize = Math.floor(size / 25); // 保持大约25x25的网格
+            tileCount = Math.floor(canvas.width / gridSize);
+            
+            // 重新绘制游戏 - 使用已初始化的 gameRunning 变量
+            if (gameRunning) {
+                draw();
+            } else {
+                // 如果游戏未运行，至少绘制初始状态
+                draw();
+            }
+        }
+        
+        // 初始化画布大小
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
         
         // 初始化最高分
         highScoreElement.textContent = highScore;
@@ -290,10 +417,12 @@
         
         // 初始化游戏
         function initGame() {
+            tileCount = Math.floor(canvas.width / gridSize);
+            
             snake = [
-                {x: 10, y: 10},
-                {x: 9, y: 10},
-                {x: 8, y: 10}
+                {x: Math.floor(tileCount/2), y: Math.floor(tileCount/2)},
+                {x: Math.floor(tileCount/2)-1, y: Math.floor(tileCount/2)},
+                {x: Math.floor(tileCount/2)-2, y: Math.floor(tileCount/2)}
             ];
             
             foods = [];
@@ -654,6 +783,35 @@
                         dy = 1;
                     }
                     break;
+            }
+        });
+        
+        // 移动端控制按钮事件
+        upBtn.addEventListener('click', () => {
+            if (gameRunning && dy === 0) {
+                dx = 0;
+                dy = -1;
+            }
+        });
+        
+        downBtn.addEventListener('click', () => {
+            if (gameRunning && dy === 0) {
+                dx = 0;
+                dy = 1;
+            }
+        });
+        
+        leftBtn.addEventListener('click', () => {
+            if (gameRunning && dx === 0) {
+                dx = -1;
+                dy = 0;
+            }
+        });
+        
+        rightBtn.addEventListener('click', () => {
+            if (gameRunning && dx === 0) {
+                dx = 1;
+                dy = 0;
             }
         });
         
