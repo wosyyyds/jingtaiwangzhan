@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>双人井字棋游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            padding: 20px;
+        }
+        
+        .container {
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2.5rem;
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .player {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .player.active {
+            background-color: #e3f2fd;
+            box-shadow: 0 0 10px rgba(33, 150, 243, 0.3);
+        }
+        
+        .player h2 {
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        
+        .player-score {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #2196f3;
+        }
+        
+        .player-X h2 {
+            color: #f44336;
+        }
+        
+        .player-O h2 {
+            color: #4caf50;
+        }
+        
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .cell {
+            aspect-ratio: 1;
+            background-color: #fff;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease;
+        }
+        
+        .cell:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+            background-color: #f5f5f5;
+        }
+        
+        .cell.X {
+            color: #f44336;
+        }
+        
+        .cell.O {
+            color: #4caf50;
+        }
+        
+        .game-status {
+            margin: 20px 0;
+            font-size: 1.3rem;
+            font-weight: bold;
+            min-height: 30px;
+            color: #333;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        #reset {
+            background-color: #ff9800;
+            color: white;
+        }
+        
+        #reset:hover {
+            background-color: #f57c00;
+            transform: translateY(-2px);
+        }
+        
+        #new-game {
+            background-color: #4caf50;
+            color: white;
+        }
+        
+        #new-game:hover {
+            background-color: #388e3c;
+            transform: translateY(-2px);
+        }
+        
+        .winning-cell {
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .cell {
+                font-size: 2.5rem;
+            }
+            
+            .game-info {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>双人井字棋</h1>
+        
+        <div class="game-info">
+            <div class="player player-X active">
+                <h2>玩家 X</h2>
+                <div class="player-score" id="score-x">0</div>
+            </div>
+            <div class="player player-O">
+                <h2>玩家 O</h2>
+                <div class="player-score" id="score-o">0</div>
+            </div>
+        </div>
+        
+        <div class="game-board" id="board">
+            <!-- 棋盘格子将通过JavaScript动态生成 -->
+        </div>
+        
+        <div class="game-status" id="status">玩家 X 的回合</div>
+        
+        <div class="controls">
+            <button id="reset">重置棋盘</button>
+            <button id="new-game">新游戏</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 游戏状态
+            const gameState = {
+                board: ['', '', '', '', '', '', '', '', ''],
+                currentPlayer: 'X',
+                gameActive: true,
+                scores: {
+                    X: 0,
+                    O: 0
+                },
+                winningCombinations: [
+                    [0, 1, 2], [3, 4, 5], [6, 7, 8], // 横线
+                    [0, 3, 6], [1, 4, 7], [2, 5, 8], // 竖线
+                    [0, 4, 8], [2, 4, 6]             // 对角线
+                ]
+            };
+
+            // DOM元素
+            const boardElement = document.getElementById('board');
+            const statusElement = document.getElementById('status');
+            const resetButton = document.getElementById('reset');
+            const newGameButton = document.getElementById('new-game');
+            const scoreXElement = document.getElementById('score-x');
+            const scoreOElement = document.getElementById('score-o');
+            const playerXElement = document.querySelector('.player-X');
+            const playerOElement = document.querySelector('.player-O');
+
+            // 初始化棋盘
+            function initializeBoard() {
+                boardElement.innerHTML = '';
+                for (let i = 0; i < 9; i++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.setAttribute('data-index', i);
+                    cell.addEventListener('click', () => handleCellClick(i));
+                    boardElement.appendChild(cell);
+                }
+            }
+
+            // 处理格子点击
+            function handleCellClick(index) {
+                if (!gameState.gameActive || gameState.board[index] !== '') return;
+                
+                // 更新游戏状态
+                gameState.board[index] = gameState.currentPlayer;
+                
+                // 更新UI
+                const cell = document.querySelector(`.cell[data-index="${index}"]`);
+                cell.textContent = gameState.currentPlayer;
+                cell.classList.add(gameState.currentPlayer);
+                
+                // 检查游戏结果
+                checkGameResult();
+            }
+
+            // 检查游戏结果
+            function checkGameResult() {
+                let roundWon = false;
+                let winningCombo = null;
+                
+                // 检查胜利条件
+                for (let i = 0; i < gameState.winningCombinations.length; i++) {
+                    const [a, b, c] = gameState.winningCombinations[i];
+                    if (gameState.board[a] && 
+                        gameState.board[a] === gameState.board[b] && 
+                        gameState.board[a] === gameState.board[c]) {
+                        roundWon = true;
+                        winningCombo = gameState.winningCombinations[i];
+                        break;
+                    }
+                }
+                
+                if (roundWon) {
+                    // 玩家胜利
+                    gameState.scores[gameState.currentPlayer]++;
+                    updateScores();
+                    highlightWinningCells(winningCombo);
+                    statusElement.textContent = `玩家 ${gameState.currentPlayer} 获胜！`;
+                    gameState.gameActive = false;
+                    return;
+                }
+                
+                // 检查平局
+                if (!gameState.board.includes('')) {
+                    statusElement.textContent = "平局！";
+                    gameState.gameActive = false;
+                    return;
+                }
+                
+                // 切换玩家
+                gameState.currentPlayer = gameState.currentPlayer === 'X' ? 'O' : 'X';
+                updatePlayerTurn();
+            }
+
+            // 更新玩家回合显示
+            function updatePlayerTurn() {
+                statusElement.textContent = `玩家 ${gameState.currentPlayer} 的回合`;
+                
+                // 更新活跃玩家指示器
+                if (gameState.currentPlayer === 'X') {
+                    playerXElement.classList.add('active');
+                    playerOElement.classList.remove('active');
+                } else {
+                    playerOElement.classList.add('active');
+                    playerXElement.classList.remove('active');
+                }
+            }
+
+            // 高亮显示获胜的格子
+            function highlightWinningCells(winningCombo) {
+                winningCombo.forEach(index => {
+                    const cell = document.querySelector(`.cell[data-index="${index}"]`);
+                    cell.classList.add('winning-cell');
+                });
+            }
+
+            // 更新分数显示
+            function updateScores() {
+                scoreXElement.textContent = gameState.scores.X;
+                scoreOElement.textContent = gameState.scores.O;
+            }
+
+            // 重置棋盘
+            function resetBoard() {
+                gameState.board = ['', '', '', '', '', '', '', '', ''];
+                gameState.currentPlayer = 'X';
+                gameState.gameActive = true;
+                
+                // 清除所有格子的内容和样式
+                document.querySelectorAll('.cell').forEach(cell => {
+                    cell.textContent = '';
+                    cell.classList.remove('X', 'O', 'winning-cell');
+                });
+                
+                updatePlayerTurn();
+            }
+
+            // 新游戏（重置分数）
+            function newGame() {
+                gameState.scores.X = 0;
+                gameState.scores.O = 0;
+                updateScores();
+                resetBoard();
+            }
+
+            // 事件监听
+            resetButton.addEventListener('click', resetBoard);
+            newGameButton.addEventListener('click', newGame);
+
+            // 初始化游戏
+            initializeBoard();
+            updateScores();
+        });
+    </script>
+</body>
+</html>

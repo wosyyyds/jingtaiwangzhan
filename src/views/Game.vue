@@ -226,6 +226,46 @@ const games = ref([
     difficulty: '简单',
     path: '/html_files/拼图.html',
     rating: 3
+  },
+  {
+    id: 'pingpong',
+    name: '双人乒乓球',
+    icon: '🏓',
+    description: '本地双人对战，控制球拍互相对打，反应与走位的较量',
+    category: '益智',
+    difficulty: '简单',
+    path: '/html_files/双人乒乓球.html',
+    rating: 3
+  },
+  {
+    id: 'tictactoe',
+    name: '双人井字棋',
+    icon: '⭕✖️',
+    description: '经典二人回合制游戏，轮流落子，先连成三子的一方获胜',
+    category: '益智',
+    difficulty: '简单',
+    path: '/html_files/双人井字棋.html',
+    rating: 3
+  },
+  {
+    id: 'snake-dual',
+    name: '双人贪吃蛇',
+    icon: '🐍👥',
+    description: '本地双人对战：两名玩家同时操作各自的蛇，抢夺食物并躲避碰撞，考验反应与策略',
+    category: '益智',
+    difficulty: '简单',
+    path: '/html_files/双人贪吃蛇.html',
+    rating: 3
+  },
+  {
+    id: 'tetris-dual',
+    name: '双人俄罗斯方块',
+    icon: '🔳🔳',
+    description: '双人对战俄罗斯方块：互相发送障碍，争夺更高分数与生存时间，适合竞速与策略型玩家',
+    category: '益智',
+    difficulty: '简单',
+    path: '/html_files/双人俄罗斯方块.html',
+    rating: 3
   }
 ])
 
@@ -275,6 +315,12 @@ const getGameBg = (id) => {
     'push-the-box': 'https://images.unsplash.com/photo-1579783902614-a3fb39268b59?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
     huarongdao: 'https://images.unsplash.com/photo-1589998059171-988d887df646?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
     puzzle: 'https://images.unsplash.com/photo-1605106702734-205df224ecce?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80'
+  ,
+  pingpong: 'https://images.unsplash.com/photo-1509223197845-458d87318791?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
+  tictactoe: 'https://images.unsplash.com/photo-1545239351-1141bd82e8a6?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80'
+  ,
+  'snake-dual': 'https://images.unsplash.com/photo-1505686994434-e3cc1d1d7f82?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80',
+  'tetris-dual': 'https://images.unsplash.com/photo-1602526436134-8b1d95a8f3a6?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80'
   }
   return gameBgs[id] || 'https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80'
 }

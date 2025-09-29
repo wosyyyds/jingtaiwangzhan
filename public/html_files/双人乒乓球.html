@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>双人乒乓球游戏</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+        }
+        
+        .game-container {
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            margin-bottom: 10px;
+        }
+        
+        .score-board {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        canvas {
+            background-color: #000;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .controls {
+            margin-top: 15px;
+            color: white;
+            font-size: 14px;
+        }
+        
+        .player-controls {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        
+        .player {
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            border-radius: 5px;
+            width: 45%;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>双人乒乓球</h1>
+        <div class="score-board">
+            <div class="player1-score">玩家1: 0</div>
+            <div class="player2-score">玩家2: 0</div>
+        </div>
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+        
+        <div class="controls">
+            <p>使用以下按键控制球拍：</p>
+            <div class="player-controls">
+                <div class="player">
+                    <p>玩家1 (左侧)</p>
+                    <p>W - 向上移动</p>
+                    <p>S - 向下移动</p>
+                </div>
+                <div class="player">
+                    <p>玩家2 (右侧)</p>
+                    <p>↑ - 向上移动</p>
+                    <p>↓ - 向下移动</p>
+                </div>
+            </div>
+        </div>
+        
+        <button id="startButton">开始游戏</button>
+        <button id="resetButton">重新开始</button>
+    </div>
+    
+    <div class="game-over" id="gameOver">
+        <h2 id="winnerText">游戏结束</h2>
+        <button id="restartButton">再玩一次</button>
+    </div>
+
+    <script>
+        // 获取Canvas元素和上下文
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 游戏元素
+        const ball = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 10,
+            speedX: 5,
+            speedY: 5,
+            color: '#FFF'
+        };
+        
+        const paddleHeight = 100;
+        const paddleWidth = 10;
+        
+        const player1 = {
+            x: 10,
+            y: canvas.height / 2 - paddleHeight / 2,
+            width: paddleWidth,
+            height: paddleHeight,
+            color: '#FF5252',
+            score: 0,
+            speed: 8
+        };
+        
+        const player2 = {
+            x: canvas.width - paddleWidth - 10,
+            y: canvas.height / 2 - paddleHeight / 2,
+            width: paddleWidth,
+            height: paddleHeight,
+            color: '#2196F3',
+            score: 0,
+            speed: 8
+        };
+        
+        // 游戏状态
+        let gameRunning = false;
+        let animationId;
+        
+        // 按键状态
+        const keys = {
+            w: false,
+            s: false,
+            ArrowUp: false,
+            ArrowDown: false
+        };
+        
+        // 获取DOM元素
+        const startButton = document.getElementById('startButton');
+        const resetButton = document.getElementById('resetButton');
+        const restartButton = document.getElementById('restartButton');
+        const gameOverScreen = document.getElementById('gameOver');
+        const winnerText = document.getElementById('winnerText');
+        const player1ScoreElement = document.querySelector('.player1-score');
+        const player2ScoreElement = document.querySelector('.player2-score');
+        
+        // 事件监听器
+        startButton.addEventListener('click', startGame);
+        resetButton.addEventListener('click', resetGame);
+        restartButton.addEventListener('click', restartGame);
+        
+        document.addEventListener('keydown', (e) => {
+            if (keys.hasOwnProperty(e.key)) {
+                keys[e.key] = true;
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            if (keys.hasOwnProperty(e.key)) {
+                keys[e.key] = false;
+            }
+        });
+        
+        // 游戏函数
+        function startGame() {
+            if (!gameRunning) {
+                gameRunning = true;
+                resetBall();
+                gameLoop();
+            }
+        }
+        
+        function resetGame() {
+            gameRunning = false;
+            player1.score = 0;
+            player2.score = 0;
+            updateScore();
+            resetBall();
+            resetPaddles();
+            cancelAnimationFrame(animationId);
+            gameOverScreen.style.display = 'none';
+        }
+        
+        function restartGame() {
+            resetGame();
+            startGame();
+        }
+        
+        function resetBall() {
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height / 2;
+            // 随机决定球的初始方向
+            ball.speedX = (Math.random() > 0.5 ? 1 : -1) * 5;
+            ball.speedY = (Math.random() * 2 - 1) * 5;
+        }
+        
+        function resetPaddles() {
+            player1.y = canvas.height / 2 - paddleHeight / 2;
+            player2.y = canvas.height / 2 - paddleHeight / 2;
+        }
+        
+        function updateScore() {
+            player1ScoreElement.textContent = `玩家1: ${player1.score}`;
+            player2ScoreElement.textContent = `玩家2: ${player2.score}`;
+        }
+        
+        function checkWin() {
+            if (player1.score >= 5) {
+                winnerText.textContent = '玩家1获胜！';
+                gameOver();
+            } else if (player2.score >= 5) {
+                winnerText.textContent = '玩家2获胜！';
+                gameOver();
+            }
+        }
+        
+        function gameOver() {
+            gameRunning = false;
+            cancelAnimationFrame(animationId);
+            gameOverScreen.style.display = 'block';
+        }
+        
+        function update() {
+            if (!gameRunning) return;
+            
+            // 移动球
+            ball.x += ball.speedX;
+            ball.y += ball.speedY;
+            
+            // 球碰到上下边界反弹
+            if (ball.y - ball.radius <= 0 || ball.y + ball.radius >= canvas.height) {
+                ball.speedY = -ball.speedY;
+            }
+            
+            // 球碰到左右边界（得分）
+            if (ball.x - ball.radius <= 0) {
+                player2.score++;
+                updateScore();
+                checkWin();
+                resetBall();
+            } else if (ball.x + ball.radius >= canvas.width) {
+                player1.score++;
+                updateScore();
+                checkWin();
+                resetBall();
+            }
+            
+            // 球与球拍碰撞检测
+            // 玩家1的球拍
+            if (ball.x - ball.radius <= player1.x + player1.width &&
+                ball.y >= player1.y && ball.y <= player1.y + player1.height) {
+                if (ball.speedX < 0) {
+                    ball.speedX = -ball.speedX;
+                    // 根据击中球拍的位置调整反弹角度
+                    let hitPoint = (ball.y - player1.y) / player1.height;
+                    ball.speedY = 5 * (hitPoint - 0.5);
+                }
+            }
+            
+            // 玩家2的球拍
+            if (ball.x + ball.radius >= player2.x &&
+                ball.y >= player2.y && ball.y <= player2.y + player2.height) {
+                if (ball.speedX > 0) {
+                    ball.speedX = -ball.speedX;
+                    // 根据击中球拍的位置调整反弹角度
+                    let hitPoint = (ball.y - player2.y) / player2.height;
+                    ball.speedY = 5 * (hitPoint - 0.5);
+                }
+            }
+            
+            // 移动球拍
+            if (keys.w && player1.y > 0) {
+                player1.y -= player1.speed;
+            }
+            if (keys.s && player1.y < canvas.height - player1.height) {
+                player1.y += player1.speed;
+            }
+            if (keys.ArrowUp && player2.y > 0) {
+                player2.y -= player2.speed;
+            }
+            if (keys.ArrowDown && player2.y < canvas.height - player2.height) {
+                player2.y += player2.speed;
+            }
+        }
+        
+        function draw() {
+            // 清空画布
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制中线
+            ctx.setLineDash([5, 15]);
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.strokeStyle = '#FFF';
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // 绘制球
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = ball.color;
+            ctx.fill();
+            ctx.closePath();
+            
+            // 绘制球拍
+            ctx.fillStyle = player1.color;
+            ctx.fillRect(player1.x, player1.y, player1.width, player1.height);
+            
+            ctx.fillStyle = player2.color;
+            ctx.fillRect(player2.x, player2.y, player2.width, player2.height);
+        }
+        
+        function gameLoop() {
+            update();
+            draw();
+            if (gameRunning) {
+                animationId = requestAnimationFrame(gameLoop);
+            }
+        }
+        
+        // 初始绘制
+        draw();
+    </script>
+</body>
+</html>

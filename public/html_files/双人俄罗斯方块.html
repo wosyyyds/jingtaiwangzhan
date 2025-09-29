@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>双人俄罗斯方块</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #222;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        
+        h1 {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        #game-container {
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .player-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .tetris-board {
+            position: relative;
+            width: 300px;
+            height: 600px;
+            background-color: #111;
+            border: 2px solid #444;
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        .player-info {
+            margin-top: 10px;
+            font-size: 20px;
+            text-align: center;
+        }
+        
+        #controls {
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .control-set {
+            background-color: #333;
+            padding: 10px 20px;
+            border-radius: 5px;
+        }
+        
+        #start-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        
+        #start-button {
+            padding: 15px 30px;
+            font-size: 24px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        
+        #start-button:hover {
+            background-color: #45a049;
+        }
+        
+        #countdown {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 72px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+            z-index: 90;
+            display: none;
+        }
+        
+        .game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            font-size: 36px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>双人俄罗斯方块</h1>
+    
+    <div id="start-screen">
+        <h2>双人俄罗斯方块</h2>
+        <div style="display: flex; gap: 50px; margin: 30px 0;">
+            <div class="control-set">
+                <h3>玩家1控制</h3>
+                <p>A: 左移</p>
+                <p>D: 右移</p>
+                <p>W: 旋转</p>
+                <p>S: 加速下落</p>
+            </div>
+            <div class="control-set">
+                <h3>玩家2控制</h3>
+                <p>←: 左移</p>
+                <p>→: 右移</p>
+                <p>↑: 旋转</p>
+                <p>↓: 加速下落</p>
+            </div>
+        </div>
+        <button id="start-button">开始游戏</button>
+    </div>
+    
+    <div id="countdown"></div>
+    
+    <div id="game-container">
+        <div class="player-area">
+            <div class="tetris-board" id="board1">
+                <canvas id="canvas1" width="300" height="600"></canvas>
+                <div class="game-over" id="game-over1" style="display: none;">游戏结束</div>
+            </div>
+            <div class="player-info">
+                <span style="color: #00ff00;">玩家1</span>
+                <div>分数: <span id="score1">0</span></div>
+                <div>等级: <span id="level1">1</span></div>
+            </div>
+        </div>
+        
+        <div class="player-area">
+            <div class="tetris-board" id="board2">
+                <canvas id="canvas2" width="300" height="600"></canvas>
+                <div class="game-over" id="game-over2" style="display: none;">游戏结束</div>
+            </div>
+            <div class="player-info">
+                <span style="color: #ff00ff;">玩家2</span>
+                <div>分数: <span id="score2">0</span></div>
+                <div>等级: <span id="level2">1</span></div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="controls">
+        <div class="control-set">
+            <h3>玩家1控制</h3>
+            <p>A: 左移</p>
+            <p>D: 右移</p>
+            <p>W: 旋转</p>
+            <p>S: 加速下落</p>
+        </div>
+        <div class="control-set">
+            <h3>玩家2控制</h3>
+            <p>←: 左移</p>
+            <p>→: 右移</p>
+            <p>↑: 旋转</p>
+            <p>↓: 加速下落</p>
+        </div>
+    </div>
+
+    <script>
+        // 游戏常量
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+        const COLORS = [
+            null,
+            '#00FFFF', // I
+            '#0000FF', // J
+            '#FF7F00', // L
+            '#FFFF00', // O
+            '#00FF00', // S
+            '#800080', // T
+            '#FF0000'  // Z
+        ];
+        
+        // 方块形状定义
+        const SHAPES = [
+            null,
+            [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]], // I
+            [[2, 0, 0], [2, 2, 2], [0, 0, 0]],                         // J
+            [[0, 0, 3], [3, 3, 3], [0, 0, 0]],                         // L
+            [[0, 4, 4], [0, 4, 4], [0, 0, 0]],                         // O
+            [[0, 5, 5], [5, 5, 0], [0, 0, 0]],                         // S
+            [[0, 6, 0], [6, 6, 6], [0, 0, 0]],                         // T
+            [[7, 7, 0], [0, 7, 7], [0, 0, 0]]                          // Z
+        ];
+        
+        // 玩家类
+        class Player {
+            constructor(canvasId, scoreId, levelId, gameOverId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.scoreElement = document.getElementById(scoreId);
+                this.levelElement = document.getElementById(levelId);
+                this.gameOverElement = document.getElementById(gameOverId);
+                
+                this.reset();
+            }
+            
+            reset() {
+                this.board = this.createMatrix(COLS, ROWS);
+                this.score = 0;
+                this.level = 1;
+                this.lines = 0;
+                this.gameOver = false;
+                this.dropCounter = 0;
+                this.dropInterval = 1000;
+                this.lastTime = 0;
+                this.piece = null;
+                this.nextPiece = this.randomPiece();
+                
+                this.scoreElement.textContent = this.score;
+                this.levelElement.textContent = this.level;
+                this.gameOverElement.style.display = 'none';
+            }
+            
+            createMatrix(width, height) {
+                const matrix = [];
+                while (height--) {
+                    matrix.push(new Array(width).fill(0));
+                }
+                return matrix;
+            }
+            
+            randomPiece() {
+                const id = Math.floor(Math.random() * 7) + 1;
+                return {
+                    pos: {x: Math.floor(COLS / 2) - 1, y: 0},
+                    matrix: SHAPES[id],
+                    id: id
+                };
+            }
+            
+            drawMatrix(matrix, offset) {
+                matrix.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        if (value !== 0) {
+                            this.ctx.fillStyle = COLORS[value];
+                            this.ctx.fillRect(
+                                (x + offset.x) * BLOCK_SIZE,
+                                (y + offset.y) * BLOCK_SIZE,
+                                BLOCK_SIZE,
+                                BLOCK_SIZE
+                            );
+                            this.ctx.strokeStyle = '#000';
+                            this.ctx.strokeRect(
+                                (x + offset.x) * BLOCK_SIZE,
+                                (y + offset.y) * BLOCK_SIZE,
+                                BLOCK_SIZE,
+                                BLOCK_SIZE
+                            );
+                        }
+                    });
+                });
+            }
+            
+            draw() {
+                // 清空画布
+                this.ctx.fillStyle = '#111';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // 绘制已落下的方块
+                this.drawMatrix(this.board, {x: 0, y: 0});
+                
+                // 绘制当前方块
+                if (this.piece) {
+                    this.drawMatrix(this.piece.matrix, this.piece.pos);
+                }
+            }
+            
+            merge() {
+                this.piece.matrix.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        if (value !== 0) {
+                            this.board[y + this.piece.pos.y][x + this.piece.pos.x] = value;
+                        }
+                    });
+                });
+            }
+            
+            collide() {
+                const [m, o] = [this.piece.matrix, this.piece.pos];
+                for (let y = 0; y < m.length; ++y) {
+                    for (let x = 0; x < m[y].length; ++x) {
+                        if (m[y][x] !== 0 &&
+                            (this.board[y + o.y] === undefined ||
+                             this.board[y + o.y][x + o.x] === undefined ||
+                             this.board[y + o.y][x + o.x] !== 0)) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+            
+            rotate() {
+                const matrix = this.piece.matrix;
+                const N = matrix.length;
+                
+                // 转置矩阵
+                for (let y = 0; y < N; ++y) {
+                    for (let x = 0; x < y; ++x) {
+                        [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+                    }
+                }
+                
+                // 反转每一行
+                for (let y = 0; y < N; ++y) {
+                    matrix[y].reverse();
+                }
+                
+                // 如果旋转后发生碰撞，则恢复原状
+                if (this.collide()) {
+                    // 反转回来
+                    for (let y = 0; y < N; ++y) {
+                        matrix[y].reverse();
+                    }
+                    
+                    // 再次转置
+                    for (let y = 0; y < N; ++y) {
+                        for (let x = 0; x < y; ++x) {
+                            [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+                        }
+                    }
+                }
+            }
+            
+            movePiece(dir) {
+                if (this.gameOver) return;
+                
+                this.piece.pos.x += dir;
+                if (this.collide()) {
+                    this.piece.pos.x -= dir;
+                }
+            }
+            
+            dropPiece() {
+                if (this.gameOver) return;
+                
+                this.piece.pos.y++;
+                if (this.collide()) {
+                    this.piece.pos.y--;
+                    this.merge();
+                    this.clearLines();
+                    if (this.piece.pos.y === 0) {
+                        this.gameOver = true;
+                        this.gameOverElement.style.display = 'flex';
+                    }
+                    this.piece = this.nextPiece;
+                    this.nextPiece = this.randomPiece();
+                }
+                this.dropCounter = 0;
+            }
+            
+            hardDrop() {
+                if (this.gameOver) return;
+                
+                while (!this.collide()) {
+                    this.piece.pos.y++;
+                }
+                this.piece.pos.y--;
+                this.dropPiece();
+            }
+            
+            clearLines() {
+                let linesCleared = 0;
+                
+                outer: for (let y = ROWS - 1; y >= 0; --y) {
+                    for (let x = 0; x < COLS; ++x) {
+                        if (this.board[y][x] === 0) {
+                            continue outer;
+                        }
+                    }
+                    
+                    // 移除已满的行
+                    const row = this.board.splice(y, 1)[0].fill(0);
+                    this.board.unshift(row);
+                    ++y; // 检查同一行（现在是新行）
+                    
+                    linesCleared++;
+                }
+                
+                if (linesCleared > 0) {
+                    // 计算得分
+                    this.lines += linesCleared;
+                    this.score += this.calculateScore(linesCleared);
+                    this.scoreElement.textContent = this.score;
+                    
+                    // 更新等级
+                    this.level = Math.floor(this.lines / 10) + 1;
+                    this.levelElement.textContent = this.level;
+                    
+                    // 加快下落速度
+                    this.dropInterval = 1000 / this.level;
+                }
+            }
+            
+            calculateScore(lines) {
+                switch (lines) {
+                    case 1: return 100 * this.level;
+                    case 2: return 300 * this.level;
+                    case 3: return 500 * this.level;
+                    case 4: return 800 * this.level;
+                    default: return 0;
+                }
+            }
+            
+            update(time = 0) {
+                if (this.gameOver) return;
+                
+                const deltaTime = time - this.lastTime;
+                this.lastTime = time;
+                
+                this.dropCounter += deltaTime;
+                if (this.dropCounter > this.dropInterval) {
+                    if (!this.piece) {
+                        this.piece = this.nextPiece;
+                        this.nextPiece = this.randomPiece();
+                    }
+                    this.dropPiece();
+                }
+                
+                this.draw();
+            }
+        }
+        
+        // 游戏主类
+        class TetrisGame {
+            constructor() {
+                this.player1 = new Player('canvas1', 'score1', 'level1', 'game-over1');
+                this.player2 = new Player('canvas2', 'score2', 'level2', 'game-over2');
+                this.gameStarted = false;
+                this.animationId = null;
+                
+                this.initControls();
+                this.initStartScreen();
+            }
+            
+            initControls() {
+                document.addEventListener('keydown', event => {
+                    if (!this.gameStarted) return;
+                    
+                    // 玩家1控制
+                    if (!this.player1.gameOver) {
+                        switch (event.key.toLowerCase()) {
+                            case 'a':
+                                this.player1.movePiece(-1);
+                                break;
+                            case 'd':
+                                this.player1.movePiece(1);
+                                break;
+                            case 'w':
+                                this.player1.rotate();
+                                break;
+                            case 's':
+                                this.player1.hardDrop();
+                                break;
+                        }
+                    }
+                    
+                    // 玩家2控制
+                    if (!this.player2.gameOver) {
+                        switch (event.key) {
+                            case 'ArrowLeft':
+                                this.player2.movePiece(-1);
+                                break;
+                            case 'ArrowRight':
+                                this.player2.movePiece(1);
+                                break;
+                            case 'ArrowUp':
+                                this.player2.rotate();
+                                break;
+                            case 'ArrowDown':
+                                this.player2.hardDrop();
+                                break;
+                        }
+                    }
+                });
+            }
+            
+            initStartScreen() {
+                const startButton = document.getElementById('start-button');
+                const startScreen = document.getElementById('start-screen');
+                const countdownElement = document.getElementById('countdown');
+                
+                startButton.addEventListener('click', () => {
+                    startScreen.style.display = 'none';
+                    this.startCountdown();
+                });
+            }
+            
+            startCountdown() {
+                const countdownElement = document.getElementById('countdown');
+                let count = 3;
+                
+                countdownElement.style.display = 'block';
+                countdownElement.textContent = count;
+                
+                const countdownInterval = setInterval(() => {
+                    count--;
+                    countdownElement.textContent = count;
+                    
+                    if (count <= 0) {
+                        clearInterval(countdownInterval);
+                        countdownElement.style.display = 'none';
+                        this.startGame();
+                    }
+                }, 1000);
+            }
+            
+            startGame() {
+                this.player1.reset();
+                this.player2.reset();
+                this.gameStarted = true;
+                
+                const animate = (time) => {
+                    this.player1.update(time);
+                    this.player2.update(time);
+                    
+                    this.animationId = requestAnimationFrame(animate);
+                    
+                    // 检查游戏是否结束
+                    if (this.player1.gameOver && this.player2.gameOver) {
+                        this.gameOver();
+                    }
+                };
+                
+                this.animationId = requestAnimationFrame(animate);
+            }
+            
+            gameOver() {
+                cancelAnimationFrame(this.animationId);
+                this.gameStarted = false;
+                
+                setTimeout(() => {
+                    document.getElementById('start-screen').style.display = 'flex';
+                }, 2000);
+            }
+        }
+        
+        // 初始化游戏
+        const game = new TetrisGame();
+    </script>
+</body>
+</html>
