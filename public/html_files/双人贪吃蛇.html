@@ -138,8 +138,11 @@
         let nextDirection2 = 'left';
         let score2 = 0;
         
-        // 食物
-        let food = {x: 10, y: 10};
+            // 食物列表：同时存在两个食物，分别归属玩家1和玩家2
+            let foods = [
+                { x: 8, y: 10, owner: 1 },
+                { x: 12, y: 10, owner: 2 }
+            ];
         
         // 游戏状态
         let gameOver = false;
@@ -147,36 +150,53 @@
         let gameStarted = false;
         
         // 生成随机食物
-        function generateFood() {
+        // 生成单个不与蛇或已有食物重叠的食物
+        function generateSingleFood(owner) {
             let validPosition = false;
             let newFood;
-            
+
             while (!validPosition) {
                 newFood = {
                     x: Math.floor(Math.random() * gridWidth),
-                    y: Math.floor(Math.random() * gridHeight)
+                    y: Math.floor(Math.random() * gridHeight),
+                    owner: owner
                 };
-                
-                // 检查食物是否与蛇重叠
+
                 validPosition = true;
+
+                // 不与蛇重叠
                 for (let segment of snake1) {
                     if (segment.x === newFood.x && segment.y === newFood.y) {
                         validPosition = false;
                         break;
                     }
                 }
-                
-                if (validPosition) {
-                    for (let segment of snake2) {
-                        if (segment.x === newFood.x && segment.y === newFood.y) {
-                            validPosition = false;
-                            break;
-                        }
+                if (!validPosition) continue;
+
+                for (let segment of snake2) {
+                    if (segment.x === newFood.x && segment.y === newFood.y) {
+                        validPosition = false;
+                        break;
+                    }
+                }
+                if (!validPosition) continue;
+
+                // 不与另一个食物重叠
+                for (let f of foods) {
+                    if (f && f.x === newFood.x && f.y === newFood.y) {
+                        validPosition = false;
+                        break;
                     }
                 }
             }
-            
-            food = newFood;
+
+            return newFood;
+        }
+
+        // 生成两个初始食物
+        function generateAllFoods() {
+            foods[0] = generateSingleFood(1);
+            foods[1] = generateSingleFood(2);
         }
         
         // 绘制游戏
@@ -185,9 +205,13 @@
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // 绘制食物
-            ctx.fillStyle = '#ff0000';
-            ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize, gridSize);
+            // 绘制两个食物：根据 owner 使用不同颜色
+            for (let f of foods) {
+                if (!f) continue;
+                if (f.owner === 1) ctx.fillStyle = '#66ff66'; // 绿色，玩家1的食物
+                else ctx.fillStyle = '#ff66ff'; // 品红，玩家2的食物
+                ctx.fillRect(f.x * gridSize + 2, f.y * gridSize + 2, gridSize - 4, gridSize - 4);
+            }
             
             // 绘制玩家1的蛇
             ctx.fillStyle = '#00ff00';
@@ -245,10 +269,11 @@
             }
             
             // 检查玩家1是否撞墙
-            if (head1.x < 0 || head1.x >= gridWidth || head1.y < 0 || head1.y >= gridHeight) {
-                gameOver = true;
-                return;
-            }
+            // 穿墙处理：超过边界则从另一侧出现
+            if (head1.x < 0) head1.x = gridWidth - 1;
+            else if (head1.x >= gridWidth) head1.x = 0;
+            if (head1.y < 0) head1.y = gridHeight - 1;
+            else if (head1.y >= gridHeight) head1.y = 0;
             
             // 检查玩家1是否撞到自己
             for (let i = 0; i < snake1.length; i++) {
@@ -269,16 +294,24 @@
             // 移动玩家1的蛇
             snake1.unshift(head1);
             
-            // 检查玩家1是否吃到食物
-            if (head1.x === food.x && head1.y === food.y) {
-                score1++;
-                score1Element.textContent = score1;
-                generateFood();
-                
-                // 加快游戏速度
-                if (gameSpeed > 50) {
-                    gameSpeed -= 2;
+            // 检查玩家1是否吃到任一食物
+            let ateIndex1 = foods.findIndex(f => f && f.x === head1.x && f.y === head1.y);
+            if (ateIndex1 !== -1) {
+                const f = foods[ateIndex1];
+                if (f.owner === 1) {
+                    // 正确吃到自己的食物：加分并加速
+                    score1++;
+                    if (gameSpeed > 50) gameSpeed -= 2;
+                } else {
+                    // 误食：长度减一（相较于之前长度减一）
+                    // 现在 snake1.length 为原长度+1（因为已经 unshift），目标长度 = max(1, originalLength - 1)
+                    const originalLength = snake1.length - 1;
+                    const targetLength = Math.max(1, originalLength - 1);
+                    while (snake1.length > targetLength) snake1.pop();
                 }
+                score1Element.textContent = score1;
+                // 只重生被吃掉的食物
+                foods[ateIndex1] = generateSingleFood(f.owner);
             } else {
                 snake1.pop();
             }
@@ -302,10 +335,11 @@
             }
             
             // 检查玩家2是否撞墙
-            if (head2.x < 0 || head2.x >= gridWidth || head2.y < 0 || head2.y >= gridHeight) {
-                gameOver = true;
-                return;
-            }
+            // 穿墙处理：超过边界则从另一侧出现
+            if (head2.x < 0) head2.x = gridWidth - 1;
+            else if (head2.x >= gridWidth) head2.x = 0;
+            if (head2.y < 0) head2.y = gridHeight - 1;
+            else if (head2.y >= gridHeight) head2.y = 0;
             
             // 检查玩家2是否撞到自己
             for (let i = 0; i < snake2.length; i++) {
@@ -326,16 +360,23 @@
             // 移动玩家2的蛇
             snake2.unshift(head2);
             
-            // 检查玩家2是否吃到食物
-            if (head2.x === food.x && head2.y === food.y) {
-                score2++;
-                score2Element.textContent = score2;
-                generateFood();
-                
-                // 加快游戏速度
-                if (gameSpeed > 50) {
-                    gameSpeed -= 2;
+            // 检查玩家2是否吃到任一食物
+            let ateIndex2 = foods.findIndex(f => f && f.x === head2.x && f.y === head2.y);
+            if (ateIndex2 !== -1) {
+                const f = foods[ateIndex2];
+                if (f.owner === 2) {
+                    // 正确吃到自己的食物：加分并加速
+                    score2++;
+                    if (gameSpeed > 50) gameSpeed -= 2;
+                } else {
+                    // 误食：长度减一
+                    const originalLength = snake2.length - 1;
+                    const targetLength = Math.max(1, originalLength - 1);
+                    while (snake2.length > targetLength) snake2.pop();
                 }
+                score2Element.textContent = score2;
+                // 只重生被吃掉的食物
+                foods[ateIndex2] = generateSingleFood(f.owner);
             } else {
                 snake2.pop();
             }
@@ -400,6 +441,8 @@
             gameOver = false;
             gameStarted = false;
             
+            // 重新生成食物并显示开始界面
+            generateAllFoods();
             startScreen.style.display = 'flex';
         }
         
@@ -443,7 +486,8 @@
         // 开始游戏按钮
         startButton.addEventListener('click', function() {
             startScreen.style.display = 'none';
-            generateFood();
+            // 生成两个初始食物
+            generateAllFoods();
             draw();
             startCountdown();
         });

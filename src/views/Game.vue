@@ -266,6 +266,16 @@ const games = ref([
     difficulty: '简单',
     path: '/html_files/双人俄罗斯方块.html',
     rating: 3
+  },
+  {
+    id: 'tetris-dual',
+    name: '五子棋',
+    icon: '⚫⚪',
+    description: '经典五子棋：双方轮流落子，先连成连续五子获胜，考验布局与攻防策略',
+    category: '益智',
+    difficulty: '简单',
+    path: '/html_files/五子棋.html',
+    rating: 3
   }
 ])
 
